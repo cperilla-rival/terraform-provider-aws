@@ -20,10 +20,49 @@ func TestAccAWSCognitoIdentityProvider_basic(t *testing.T) {
 		CheckDestroy: testAccCheckAWSCognitoIdentityProviderDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAWSCognitoIdentityProviderConfig_basic(),
+				Config: testAccAWSCognitoIdentityProviderConfig_basic(true),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckAWSCognitoIdentityProviderExists(resourceName, &identityProvider),
 					resource.TestCheckResourceAttr(resourceName, "provider_details.%", "9"),
+					resource.TestCheckResourceAttr(resourceName, "provider_details.authorize_scopes", "email"),
+					resource.TestCheckResourceAttr(resourceName, "provider_details.authorize_url", "https://accounts.google.com/o/oauth2/v2/auth"),
+					resource.TestCheckResourceAttr(resourceName, "provider_details.client_id", "test-url.apps.googleusercontent.com"),
+					resource.TestCheckResourceAttr(resourceName, "provider_details.client_secret", "client_secret"),
+					resource.TestCheckResourceAttr(resourceName, "provider_details.attributes_url", "https://people.googleapis.com/v1/people/me?personFields="),
+					resource.TestCheckResourceAttr(resourceName, "provider_details.attributes_url_add_attributes", "true"),
+					resource.TestCheckResourceAttr(resourceName, "provider_details.token_request_method", "POST"),
+					resource.TestCheckResourceAttr(resourceName, "provider_details.token_url", "https://www.googleapis.com/oauth2/v4/token"),
+					resource.TestCheckResourceAttr(resourceName, "provider_details.oidc_issuer", "https://accounts.google.com"),
+					resource.TestCheckResourceAttr(resourceName, "provider_name", "Google"),
+					resource.TestCheckResourceAttr(resourceName, "provider_type", "Google"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccAWSCognitoIdentityProvider_allFieldsUpdatingOneField(t *testing.T) {
+	var identityProvider cognitoidentityprovider.IdentityProviderType
+	resourceName := "aws_cognito_identity_provider.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckAWSCognitoIdentityProviderDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSCognitoIdentityProviderConfig_basic(false),
+			},
+			{
+				Config: testAccAWSCognitoIdentityProviderConfig_basic(true),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckAWSCognitoIdentityProviderExists(resourceName, &identityProvider),
+					// resource.TestCheckResourceAttr(resourceName, "provider_details.%", "9"),
 					resource.TestCheckResourceAttr(resourceName, "provider_details.authorize_scopes", "email"),
 					resource.TestCheckResourceAttr(resourceName, "provider_details.authorize_url", "https://accounts.google.com/o/oauth2/v2/auth"),
 					resource.TestCheckResourceAttr(resourceName, "provider_details.client_id", "test-url.apps.googleusercontent.com"),
@@ -110,8 +149,8 @@ func testAccCheckAWSCognitoIdentityProviderExists(resourceName string, identityP
 	}
 }
 
-func testAccAWSCognitoIdentityProviderConfig_basic() string {
-	return `
+func testAccAWSCognitoIdentityProviderConfig_basic(addAttributes bool) string {
+	return fmt.Sprintf(`
 
 resource "aws_cognito_user_pool" "test" {
   name                     = "tfmytestpool"
@@ -125,7 +164,7 @@ resource "aws_cognito_identity_provider" "test" {
 
   provider_details {
     attributes_url                = "https://people.googleapis.com/v1/people/me?personFields="
-    attributes_url_add_attributes = "true"
+    attributes_url_add_attributes = "%t"
     authorize_scopes              = "email"
     authorize_url                 = "https://accounts.google.com/o/oauth2/v2/auth"
     client_id                     = "test-url.apps.googleusercontent.com"
@@ -140,5 +179,5 @@ resource "aws_cognito_identity_provider" "test" {
     username = "sub"
   }
 }
-`
+`, addAttributes)
 }
